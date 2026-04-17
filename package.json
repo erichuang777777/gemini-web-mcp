@@ -1,0 +1,56 @@
+{
+  "name": "gemini-web-mcp",
+  "version": "2.0.0",
+  "description": "MCP server for Google Gemini Web — supports model switching (2.5 Pro/Flash) and Deep Research, cookie-based auth",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "gemini-web-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "login": "playwright install chromium && tsx scripts/export-cookies.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "smoke": "tsx test/smoke.ts",
+    "lint": "eslint src/ scripts/ test/",
+    "lint:fix": "eslint src/ scripts/ test/ --fix"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "gemini",
+    "google-gemini",
+    "claude",
+    "ai",
+    "deep-research",
+    "cookies"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "playwright": "^1.45.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

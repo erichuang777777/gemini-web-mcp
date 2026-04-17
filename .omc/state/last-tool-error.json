@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd D:/gemini-web-mcp && git add -A && git commit -m \\\"$(cat <<'EOF'\\nrefactor: standardize repository structure to match openevidence-mcp\\n\\n## Major Changes\\n\\n### Source Code Refactoring...",
+  "error": "Exit code 128\nfatal: not a git repository (or any of the parent directories): .git",
+  "timestamp": "2026-04-17T16:24:48.881Z",
+  "retry_count": 1
+}

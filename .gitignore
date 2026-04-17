@@ -1,0 +1,7 @@
+node_modules/
+dist/
+gemini-cookies.json
+.env
+*.local
+.DS_Store
+Thumbs.db

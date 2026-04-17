@@ -1,0 +1,257 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776441734402,
+  "projectRoot": "D:\\gemini-web-mcp",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=20",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "playwright",
+        "version": "1.45.0",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": "Node.js 20"
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "build": "tsc",
+      "dev": "tsx watch src/index.ts",
+      "start": "node dist/index.js",
+      "typecheck": "tsc --noEmit",
+      "setup": "playwright install chromium && tsx scripts/export-cookies.ts",
+      "export-cookies": "tsx scripts/export-cookies.ts"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase/PascalCase",
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "scripts",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 18,
+      "lastAccessed": 1776441733995,
+      "keyFiles": [
+        "cookies.d.ts",
+        "cookies.js",
+        "cookies.js.map",
+        "errors.d.ts",
+        "errors.js"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 4,
+      "lastAccessed": 1776441733995,
+      "keyFiles": [
+        "export-cookies.ts",
+        "inspect-ui.ts",
+        "test-full.ts",
+        "test.ts"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 6,
+      "lastAccessed": 1776441734102,
+      "keyFiles": [
+        "cookies.ts",
+        "errors.ts",
+        "gemini-client.ts",
+        "index.ts",
+        "setup.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "tsconfig.json",
+      "accessCount": 8,
+      "lastAccessed": 1776442883169,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 6,
+      "lastAccessed": 1776442818696,
+      "type": "file"
+    },
+    {
+      "path": "src\\index.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776442663211,
+      "type": "file"
+    },
+    {
+      "path": "src\\gemini-client.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776442664704,
+      "type": "file"
+    },
+    {
+      "path": "src\\setup.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776442675982,
+      "type": "file"
+    },
+    {
+      "path": "scripts\\export-cookies.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776442679591,
+      "type": "file"
+    },
+    {
+      "path": "src\\errors.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776442686502,
+      "type": "file"
+    },
+    {
+      "path": "src\\cookies.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776442689019,
+      "type": "file"
+    },
+    {
+      "path": "vitest.config.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776442969805,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 2,
+      "lastAccessed": 1776442082707,
+      "type": "file"
+    },
+    {
+      "path": "src\\tools.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776442355829,
+      "type": "file"
+    },
+    {
+      "path": "eslint.config.js",
+      "accessCount": 2,
+      "lastAccessed": 1776443006907,
+      "type": "file"
+    },
+    {
+      "path": "scripts\\test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442078878,
+      "type": "file"
+    },
+    {
+      "path": "src\\logger.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442625281,
+      "type": "file"
+    },
+    {
+      "path": "src\\cookie-export.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442648653,
+      "type": "file"
+    },
+    {
+      "path": "test\\logger.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442708371,
+      "type": "file"
+    },
+    {
+      "path": "test\\errors.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442712843,
+      "type": "file"
+    },
+    {
+      "path": "test\\cookies.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442722580,
+      "type": "file"
+    },
+    {
+      "path": "test\\smoke.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776442731336,
+      "type": "file"
+    },
+    {
+      "path": "Makefile",
+      "accessCount": 1,
+      "lastAccessed": 1776442737663,
+      "type": "file"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "accessCount": 1,
+      "lastAccessed": 1776442742238,
+      "type": "file"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "accessCount": 1,
+      "lastAccessed": 1776442746641,
+      "type": "file"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "accessCount": 1,
+      "lastAccessed": 1776442749312,
+      "type": "file"
+    },
+    {
+      "path": ".env.example",
+      "accessCount": 1,
+      "lastAccessed": 1776442753826,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.test.json",
+      "accessCount": 1,
+      "lastAccessed": 1776442887251,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
