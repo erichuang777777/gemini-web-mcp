@@ -1,8 +1,9 @@
-// src/tools.ts — MCP 工具定義
+// src/tools.ts — MCP tool definitions
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { GeminiClient, GeminiModel } from './gemini-client.js';
+import { GeminiClient } from './gemini-client.js';
 import { GeminiAuthError, GeminiNetworkError } from './errors.js';
+import type { ModelName } from './types.js';
 
 function okResponse(data: Record<string, unknown>) {
   return {
@@ -12,15 +13,15 @@ function okResponse(data: Record<string, unknown>) {
 
 function errResponse(error: unknown) {
   let type = 'GeminiError';
-  let message = '未知錯誤';
+  let message = 'Unknown error';
   let hint = '';
 
   if (error instanceof GeminiAuthError) {
     type = 'AuthError'; message = error.message;
-    hint = '請重新從瀏覽器匯出 Cookie，並重啟 MCP Server。';
+    hint = 'Please re-export cookies from your browser and restart the MCP server.';
   } else if (error instanceof GeminiNetworkError) {
     type = 'NetworkError'; message = error.message;
-    hint = '請檢查網路連線，或確認 gemini.google.com 可正常訪問。';
+    hint = 'Please check your network connection or verify gemini.google.com is accessible.';
   } else if (error instanceof Error) {
     message = error.message;
   }
@@ -32,60 +33,60 @@ function errResponse(error: unknown) {
   };
 }
 
+const MODEL_ENUM = z.enum(['auto', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro-001'] as const);
+
 export function registerTools(server: McpServer, client: GeminiClient): void {
 
-  // ── 工具 1：認證狀態 ──────────────────────────────────────────────────────
+  // ── Tool 1: Authentication Status ──────────────────────────────────────────
   server.tool(
     'gemini_auth_status',
-    '檢查 Gemini Cookie 認證狀態。驗證 Cookie 是否有效，回傳登入狀態與用戶 ID。',
+    'Check Gemini cookie authentication status. Verify cookie validity and return login status with user ID.',
     {},
     async () => {
       try {
         const s = await client.checkAuth();
         return okResponse({
           authenticated: s.authenticated,
-          userId: s.userId || '（未知）',
+          userId: s.userId || '(unknown)',
           sessionAgeMs: s.sessionAgeMs,
           message: s.authenticated
-            ? `✅ Cookie 有效，已登入。用戶 ID: ${s.userId}`
-            : '❌ Cookie 無效或已過期。請重新匯出 Cookie。',
+            ? `✅ Cookie valid, logged in. User ID: ${s.userId}`
+            : '❌ Cookie invalid or expired. Please re-export cookie.',
         });
       } catch (err) { return errResponse(err); }
     }
   );
 
-  // ── 工具 2：發送訊息 ──────────────────────────────────────────────────────
+  // ── Tool 2: Send Message (Enhanced) ───────────────────────────────────────
   server.tool(
     'gemini_chat',
     [
-      '向 Gemini 發送訊息。支援：',
-      '• 新建對話 / 繼續對話（conversationId）',
-      '• 切換模型（model: 2.5-pro / 2.5-flash / 2.0-flash / 2.0-flash-thinking）',
-      '• 啟用 Deep Research（deepResearch: true，回覆時間較長）',
+      'Send message to Gemini. Supports:',
+      '• New / existing conversation (conversationId)',
+      '• Model switching (model)',
+      '• Deep Research mode (enableSearch)',
     ].join('\n'),
     {
-      message: z.string().min(1, '訊息不能為空').max(30_000)
-        .describe('要發送給 Gemini 的訊息'),
-      conversationId: z.string().regex(/^[0-9a-f]{16}$/i).optional()
-        .describe('繼續對話時填入（16 位十六進制，例如 10755c8c7a9383b4）'),
-      model: z.enum(['default', '2.5-pro', '2.5-flash', '2.0-flash', '2.0-flash-thinking']).optional()
-        .describe('指定模型（不填則沿用目前選擇）：2.5-pro | 2.5-flash | 2.0-flash | 2.0-flash-thinking'),
-      deepResearch: z.boolean().optional()
-        .describe('啟用 Deep Research 模式（適合需要深度網路搜尋的問題，等待時間較長）'),
+      message: z.string().min(1, 'Message cannot be empty').max(30_000)
+        .describe('Message to send to Gemini'),
+      conversationId: z.string().optional()
+        .describe('Conversation ID to continue existing conversation'),
+      model: MODEL_ENUM.optional()
+        .describe('Model: auto, gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-pro-001'),
+      enableSearch: z.boolean().optional()
+        .describe('Enable Deep Research mode'),
     },
-    async ({ message, conversationId, model, deepResearch }) => {
+    async ({ message, conversationId, model, enableSearch }) => {
       try {
         const r = await client.chat({
           message,
           conversationId,
-          model: model as GeminiModel | undefined,
-          deepResearch,
+          model: model as ModelName | undefined,
+          enableSearch,
         });
         return okResponse({
           conversationId: r.conversationId,
           answer: r.answerText,
-          model: r.model ?? 'default',
-          deepResearch: r.deepResearch ?? false,
           continueWith: { conversationId: r.conversationId },
           conversationUrl: r.conversationId
             ? `https://gemini.google.com/app/${r.conversationId}` : undefined,
@@ -94,26 +95,181 @@ export function registerTools(server: McpServer, client: GeminiClient): void {
     }
   );
 
-  // ── 工具 3：對話歷史 ──────────────────────────────────────────────────────
+  // ── Tool 3: New Chat ──────────────────────────────────────────────────────
   server.tool(
-    'gemini_history',
-    '獲取指定 Gemini 對話的歷史訊息。',
+    'gemini_new_chat',
+    'Create a new Gemini conversation.',
+    {},
+    async () => {
+      try {
+        await client.newChat();
+        return okResponse({ message: '✅ New conversation created' });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 4: Select Model ──────────────────────────────────────────────────
+  server.tool(
+    'gemini_select_model',
+    'Switch the AI model used by Gemini.',
     {
-      conversationId: z.string().regex(/^[0-9a-f]{16}$/i)
-        .describe('對話 ID（16 位十六進制，例如 10755c8c7a9383b4）'),
+      model: MODEL_ENUM
+        .describe('Target model: auto, gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-pro-001'),
+    },
+    async ({ model }) => {
+      try {
+        await client.selectModel(model as ModelName);
+        return okResponse({ model, message: `✅ Switched to model: ${model}` });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 5: Get Current Model ─────────────────────────────────────────────
+  server.tool(
+    'gemini_get_model',
+    'Get the currently active AI model in Gemini.',
+    {},
+    async () => {
+      try {
+        const model = await client.getModel();
+        return okResponse({ model });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 6: Get Conversation ──────────────────────────────────────────────
+  server.tool(
+    'gemini_get_conversation',
+    'Get all messages in current conversation (user and assistant).',
+    {},
+    async () => {
+      try {
+        const messages = await client.getConversation();
+        return okResponse({
+          messages,
+          count: messages.length,
+        });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 7: List Conversations ────────────────────────────────────────────
+  server.tool(
+    'gemini_list_conversations',
+    'List all saved conversations in Gemini sidebar.',
+    {},
+    async () => {
+      try {
+        const conversations = await client.listConversations();
+        return okResponse({
+          conversations,
+          count: conversations.length,
+        });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 8: Switch Conversation ───────────────────────────────────────────
+  server.tool(
+    'gemini_switch_conversation',
+    'Switch to a specific Gemini conversation.',
+    {
+      conversationId: z.string().min(1)
+        .describe('Conversation ID (from gemini.google.com/app/<id> or list_conversations)'),
     },
     async ({ conversationId }) => {
       try {
-        const msgs = await client.getHistory(conversationId);
+        await client.switchConversation(conversationId);
         return okResponse({
           conversationId,
-          messageCount: msgs.length,
-          messages: msgs.map((m, i) => ({
-            index: i + 1,
-            role: m.role,
-            text: m.text.length > 500 ? m.text.slice(0, 500) + '…' : m.text,
-            messageId: m.messageId,
-          })),
+          message: `✅ Switched to conversation: ${conversationId}`,
+        });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 9: Delete Conversation ───────────────────────────────────────────
+  server.tool(
+    'gemini_delete_conversation',
+    'Delete a Gemini conversation.',
+    {
+      conversationId: z.string().min(1)
+        .describe('Conversation ID to delete'),
+    },
+    async ({ conversationId }) => {
+      try {
+        await client.deleteConversation(conversationId);
+        return okResponse({
+          conversationId,
+          message: `✅ Conversation deleted: ${conversationId}`,
+        });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 10: Upload File ──────────────────────────────────────────────────
+  server.tool(
+    'gemini_upload_file',
+    'Upload file to Gemini conversation (images, PDFs, etc.).',
+    {
+      filePath: z.string().min(1)
+        .describe('Local file path (absolute path)'),
+    },
+    async ({ filePath }) => {
+      try {
+        const result = await client.uploadFile(filePath);
+        return okResponse({ ...result });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 11: Enable Deep Research ─────────────────────────────────────────
+  server.tool(
+    'gemini_enable_deep_research',
+    'Enable Gemini Deep Research mode (requires subscription, limited monthly quota).',
+    {},
+    async () => {
+      try {
+        const result = await client.enableDeepResearch();
+        return result.success
+          ? okResponse({ ...result })
+          : errResponse(new Error(result.message));
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 12: Export Conversation ──────────────────────────────────────────
+  server.tool(
+    'gemini_export_conversation',
+    'Export current conversation as Markdown or JSON format.',
+    {
+      format: z.enum(['markdown', 'json']).optional()
+        .describe('Export format: markdown (default) or json'),
+    },
+    async ({ format = 'markdown' }) => {
+      try {
+        const content = await client.exportConversation(format as 'markdown' | 'json');
+        return okResponse({
+          format,
+          content,
+          contentLength: content.length,
+        });
+      } catch (err) { return errResponse(err); }
+    }
+  );
+
+  // ── Tool 13: Regenerate Response ──────────────────────────────────────────
+  server.tool(
+    'gemini_regenerate',
+    'Regenerate Gemini\'s last response.',
+    {},
+    async () => {
+      try {
+        const r = await client.regenerate();
+        return okResponse({
+          conversationId: r.conversationId,
+          answer: r.answerText,
+          message: '✅ Response regenerated',
         });
       } catch (err) { return errResponse(err); }
     }

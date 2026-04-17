@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd D:/gemini-web-mcp && git add -A && git commit -m \\\"$(cat <<'EOF'\\nrefactor: standardize repository structure to match openevidence-mcp\\n\\n## Major Changes\\n\\n### Source Code Refactoring...",
-  "error": "Exit code 128\nfatal: not a git repository (or any of the parent directories): .git",
-  "timestamp": "2026-04-17T16:24:48.881Z",
+  "tool_input_preview": "{\"command\":\"cd D:\\\\chatgpt-web-mcp && npm run build 2>&1\",\"description\":\"Build TypeScript project\"}",
+  "error": "Exit code 2\n\n> chatgpt-web-mcp@2.0.0 build\n> tsc\n\nsrc/tools.ts(216,27): error TS2345: Argument of type 'UploadResult' is not assignable to parameter of type 'Record<string, unknown>'.\r\n  Index signature for type 'string' is missing in type 'UploadResult'.\r\nsrc/tools.ts(230,24): error TS2345: Argument of type 'ThinkLongerResult' is not assignable to parameter of type 'Record<string, unknown>'.\r\n  Index signature for type 'string' is missing in type 'ThinkLongerResult'.\r\nsrc/tools.ts(245,24): erro...",
+  "timestamp": "2026-04-17T17:12:13.877Z",
   "retry_count": 1
 }

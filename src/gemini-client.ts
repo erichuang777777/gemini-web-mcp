@@ -1,47 +1,27 @@
-// src/gemini-client.ts — Playwright-based Gemini 客戶端
+// src/gemini-client.ts — Playwright-based Gemini client
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { CookieJar } from './cookies.js';
 import { GeminiAuthError, GeminiNetworkError } from './errors.js';
 import { log } from './logger.js';
+import type {
+  ModelName,
+  ChatOptions,
+  ConversationResult,
+  ConversationMessage,
+  AuthStatus,
+  ConversationInfo,
+  UploadResult,
+  DeepResearchResult,
+} from './types.js';
+import { getTimeoutForModel } from './timeout-config.js';
 
-export type GeminiModel = '2.5-pro' | '2.5-flash' | '2.0-flash' | '2.0-flash-thinking' | 'default';
-
-export interface ChatOptions {
-  message: string;
-  conversationId?: string;
-  model?: GeminiModel;
-  deepResearch?: boolean;
-}
-
-export interface ConversationResult {
-  conversationId: string;
-  answerText: string;
-  model?: string;
-  deepResearch?: boolean;
-}
-
-export interface HistoryMessage {
-  role: 'user' | 'model';
-  text: string;
-  messageId?: string;
-}
-
-export interface AuthStatus {
-  authenticated: boolean;
-  userId: string;
-  sessionAgeMs?: number;
-}
-
-// Model display name → URL param mapping
-// NOTE: MODEL_MAP is only used internally by switchModel() for display name matching.
-// Actual model switching uses DOM text matching (modelNames), not URL params.
-// These are kept for reference and potential future URL-based switching.
-const MODEL_MAP: Record<GeminiModel, string> = {
-  'default':              '',
-  '2.5-pro':              'gemini-2-5-pro',
-  '2.5-flash':            'gemini-2-5-flash',
-  '2.0-flash':            'gemini-2-0-flash',
-  '2.0-flash-thinking':   'gemini-2-0-flash-thinking',
+// DOM text patterns for each model
+const MODEL_DISPLAY_NAMES: Record<ModelName, string[]> = {
+  'auto':                 [],
+  'gemini-2.0-flash':     ['2.0 flash', 'gemini 2.0 flash'],
+  'gemini-1.5-pro':       ['1.5 pro', 'gemini 1.5 pro'],
+  'gemini-1.5-flash':     ['1.5 flash', 'gemini 1.5 flash'],
+  'gemini-1.5-pro-001':   ['1.5 pro', 'gemini 1.5 pro'],
 };
 
 export class GeminiClient {
@@ -131,17 +111,18 @@ export class GeminiClient {
 
   async chat(options: ChatOptions): Promise<ConversationResult> {
     const page = await this.ensureBrowser();
+    const timeout = getTimeoutForModel(options.model);
 
-    // 1. 導航到指定對話或建立新對話
+    // 1. Navigate to specified conversation or create new
     if (options.conversationId) {
       if (!page.url().includes(options.conversationId)) {
-        log(`導航到對話 ${options.conversationId}`);
+        log(`Navigating to conversation ${options.conversationId}`);
         await page.goto(`https://gemini.google.com/app/${options.conversationId}`, {
           waitUntil: 'domcontentloaded', timeout: 30_000,
         });
       }
     } else {
-      // 新對話：若目前已有對話，先導航回首頁以確保乾淨狀態
+      // New conversation: navigate to home if already in a conversation
       if (page.url().match(/\/app\/[0-9a-f]{16}/i)) {
         await page.goto('https://gemini.google.com/app', {
           waitUntil: 'domcontentloaded', timeout: 30_000,
@@ -150,17 +131,17 @@ export class GeminiClient {
       }
     }
 
-    // 2. 切換模型（如果指定）
-    if (options.model && options.model !== 'default') {
-      await this.switchModel(page, options.model);
+    // 2. Switch model if specified
+    if (options.model && options.model !== 'auto') {
+      await this.selectModel(options.model);
     }
 
-    // 3. 啟用 Deep Research（如果指定）
-    if (options.deepResearch) {
-      await this.enableDeepResearch(page);
+    // 3. Enable Deep Research if requested
+    if (options.enableSearch) {
+      await this.enableDeepResearch();
     }
 
-    // 4. 等待輸入框
+    // 4. Find input box
     const editorSelectors = [
       'div.ql-editor[contenteditable="true"]',
       'rich-textarea .ql-editor',
@@ -177,45 +158,43 @@ export class GeminiClient {
       } catch { /* try next */ }
     }
     if (!editor) {
-      throw new GeminiNetworkError('找不到 Gemini 輸入框。頁面可能未正確載入。');
+      throw new GeminiNetworkError('Cannot find Gemini input box. Page may not have loaded correctly.');
     }
 
-    // 5. 輸入訊息並送出
+    // 5. Type and send message
     await editor.click();
     await editor.fill('');
     await page.keyboard.type(options.message, { delay: 10 });
     await page.keyboard.press('Enter');
-    log('訊息已送出，等待回覆...');
+    log('Message sent, waiting for response...');
 
-    // 6. 等待回覆完成
-    const answerText = await this.waitForResponse(page, options.deepResearch);
+    // 6. Wait for response
+    const answerText = await this.waitForResponse(page, timeout);
 
     if (!answerText) {
       throw new GeminiNetworkError(
-        '無法從 Gemini 取得回覆。可能是頁面結構變更、回覆逾時或 DOM selector 失效。'
+        'Unable to get response from Gemini. Page structure may have changed or selector is invalid.'
       );
     }
 
-    // 7. 從 URL 提取 conversationId
+    // 7. Extract conversationId from URL
     const convMatch = page.url().match(/\/app\/([0-9a-f]{16})/i);
     const conversationId = convMatch?.[1] ?? '';
 
     return {
       conversationId,
       answerText,
-      model: options.model,
-      deepResearch: options.deepResearch,
     };
   }
 
   // ── Model Switcher ────────────────────────────────────────────────────────
-  private async switchModel(page: Page, model: GeminiModel): Promise<void> {
-    const modelParam = MODEL_MAP[model];
-    if (!modelParam) return;
+  async selectModel(model: ModelName): Promise<void> {
+    if (model === 'auto') return;
 
-    log(`切換模型到 ${model}...`);
+    const page = await this.ensureBrowser();
+    log(`Switching model to ${model}...`);
 
-    // 方法 A：找下拉式 model selector 按鈕（常見 class/aria）
+    // Try to find model selector dropdown
     const dropdownSelectors = [
       'mat-select[data-test-ms-model-selector]',
       '[aria-label*="model" i]',
@@ -233,15 +212,15 @@ export class GeminiClient {
         await btn.click();
         await page.waitForTimeout(800);
         opened = true;
-        log(`找到 model dropdown: ${sel}`);
+        log(`Found model dropdown: ${sel}`);
         break;
       }
     }
 
     if (!opened) {
-      // 方法 B：找包含目前 model 名稱的按鈕
+      // Fallback: find button containing model keywords
       const found = await page.evaluate(() => {
-        const keywords = ['gemini', 'pro', 'flash', '2.0', '2.5', 'model'];
+        const keywords = ['gemini', 'pro', 'flash', '1.5', '2.0', 'model'];
         const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
         for (const btn of btns) {
           const txt = (btn.textContent ?? '').toLowerCase();
@@ -254,26 +233,19 @@ export class GeminiClient {
         return null;
       });
       if (found) {
-        log(`用 text 找到 model btn: ${found}`);
+        log(`Found model button via text matching: ${found}`);
         await page.waitForTimeout(800);
         opened = true;
       }
     }
 
     if (!opened) {
-      log(`警告：找不到 model switcher，跳過切換`);
+      log(`Warning: could not find model switcher`);
       return;
     }
 
-    // 找並點擊目標 model 選項
-    const modelNames: Record<GeminiModel, string[]> = {
-      'default':            [],
-      '2.5-pro':            ['2.5 pro', 'gemini 2.5 pro', '2.5pro'],
-      '2.5-flash':          ['2.5 flash', 'gemini 2.5 flash', '2.5flash'],
-      '2.0-flash':          ['2.0 flash', 'gemini 2.0 flash', '2.0flash'],
-      '2.0-flash-thinking': ['2.0 flash thinking', 'flash thinking', 'thinking exp'],
-    };
-    const targetNames = modelNames[model];
+    // Find and click target model option
+    const targetNames = MODEL_DISPLAY_NAMES[model];
 
     const clicked = await page.evaluate((names: string[]) => {
       const options = document.querySelectorAll('[role="option"], [role="menuitem"], mat-option, .model-option');
@@ -288,23 +260,238 @@ export class GeminiClient {
     }, targetNames);
 
     if (clicked) {
-      log(`已選擇模型：${clicked}`);
+      log(`Selected model: ${clicked}`);
       await page.waitForTimeout(500);
     } else {
-      log(`警告：找不到模型選項 ${model}，繼續使用目前模型`);
-      // 按 Escape 關閉下拉選單
+      log(`Warning: could not find model option ${model}`);
       await page.keyboard.press('Escape');
     }
   }
 
-  // ── Deep Research ─────────────────────────────────────────────────────────
-  private async enableDeepResearch(page: Page): Promise<void> {
-    log('啟用 Deep Research...');
+  async getModel(): Promise<string> {
+    const page = await this.ensureBrowser();
+    const model = await page.evaluate(() => {
+      const btn = document.querySelector('button[aria-label*="model" i], [data-test-id="model-selector"]');
+      return btn?.textContent?.trim() ?? 'unknown';
+    }).catch(() => 'unknown');
+    return model;
+  }
 
-    // 嘗試多種 selector
+  async newChat(): Promise<void> {
+    const page = await this.ensureBrowser();
+    log('Creating new conversation...');
+
+    // Try to find "New chat" button
+    const newChatSelectors = [
+      'button[aria-label*="new" i]',
+      'button[data-test-id*="new-chat"]',
+      '.new-chat-button',
+    ];
+
+    for (const sel of newChatSelectors) {
+      const btn = await page.$(sel);
+      if (btn) {
+        await btn.click();
+        await page.waitForTimeout(1000);
+        return;
+      }
+    }
+
+    // Fallback: navigate to home
+    await page.goto('https://gemini.google.com/app', {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+  }
+
+  async getConversation(): Promise<ConversationMessage[]> {
+    const page = await this.ensureBrowser();
+    const messages = await page.evaluate(() => {
+      const result: ConversationMessage[] = [];
+
+      // Find user messages
+      const userMsgs = document.querySelectorAll('.query-text, user-query .query-text, [data-message-author-role="user"]');
+      const modelMsgs = document.querySelectorAll('message-content.model-response-text, model-response message-content, [data-message-author-role="model"] .markdown');
+
+      const maxLen = Math.max(userMsgs.length, modelMsgs.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (userMsgs[i]) {
+          result.push({ role: 'user', content: userMsgs[i].textContent?.trim() ?? '' });
+        }
+        if (modelMsgs[i]) {
+          result.push({ role: 'assistant', content: modelMsgs[i].textContent?.trim() ?? '' });
+        }
+      }
+
+      // Fallback
+      if (result.length === 0) {
+        document.querySelectorAll('.markdown').forEach((el, i) => {
+          const text = el.textContent?.trim() ?? '';
+          if (text) result.push({ role: i % 2 === 0 ? 'user' : 'assistant', content: text });
+        });
+      }
+
+      return result;
+    }).catch(() => []);
+
+    return messages.filter(m => m.content);
+  }
+
+  async listConversations(): Promise<ConversationInfo[]> {
+    const page = await this.ensureBrowser();
+    const conversations = await page.evaluate(() => {
+      const result: ConversationInfo[] = [];
+
+      // Find conversations in sidebar
+      const convLinks = document.querySelectorAll('a[href*="/app/"]');
+      for (const link of Array.from(convLinks)) {
+        const href = link.getAttribute('href') ?? '';
+        const match = href.match(/\/app\/([0-9a-f]{16})/i);
+        if (match) {
+          const title = link.textContent?.trim() ?? 'Untitled';
+          result.push({
+            conversationId: match[1],
+            title: title || 'Untitled',
+          });
+        }
+      }
+
+      return result;
+    }).catch(() => []);
+
+    return conversations;
+  }
+
+  async switchConversation(conversationId: string): Promise<void> {
+    const page = await this.ensureBrowser();
+    log(`Switching to conversation ${conversationId}`);
+    await page.goto(`https://gemini.google.com/app/${conversationId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+  }
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    const page = await this.ensureBrowser();
+    log(`Deleting conversation ${conversationId}`);
+
+    // Navigate to conversation first
+    if (!page.url().includes(conversationId)) {
+      await page.goto(`https://gemini.google.com/app/${conversationId}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+    }
+
+    // Try to find delete button
+    const deleteSelectors = [
+      'button[aria-label*="delete" i]',
+      'button[data-test-id*="delete"]',
+      '.delete-button',
+    ];
+
+    for (const sel of deleteSelectors) {
+      const btn = await page.$(sel);
+      if (btn) {
+        await btn.click();
+        // Confirm if needed
+        const confirmBtn = await page.$('button[aria-label*="delete" i]').catch(() => null);
+        if (confirmBtn) {
+          await confirmBtn.click();
+        }
+        await page.waitForTimeout(1000);
+        return;
+      }
+    }
+
+    log('Warning: could not find delete button');
+  }
+
+  async exportConversation(format: 'markdown' | 'json'): Promise<string> {
+    const messages = await this.getConversation();
+
+    if (format === 'json') {
+      return JSON.stringify(messages, null, 2);
+    }
+
+    // Markdown format
+    return messages.map(m => {
+      const role = m.role === 'user' ? 'User' : 'Assistant';
+      return `**${role}:**\n\n${m.content}\n`;
+    }).join('\n---\n\n');
+  }
+
+  async regenerate(): Promise<ConversationResult> {
+    const page = await this.ensureBrowser();
+    log('Regenerating last response...');
+
+    // Find and click regenerate button
+    const regenSelectors = [
+      'button[aria-label*="regenerate" i]',
+      'button[data-test-id*="regenerate"]',
+      '.regenerate-button',
+    ];
+
+    for (const sel of regenSelectors) {
+      const btn = await page.$(sel);
+      if (btn) {
+        await btn.click();
+        break;
+      }
+    }
+
+    // Wait for new response
+    const timeout = getTimeoutForModel();
+    const answerText = await this.waitForResponse(page, timeout);
+
+    // Extract conversationId
+    const convMatch = page.url().match(/\/app\/([0-9a-f]{16})/i);
+    const conversationId = convMatch?.[1] ?? '';
+
+    return {
+      conversationId,
+      answerText,
+    };
+  }
+
+  async uploadFile(filePath: string): Promise<UploadResult> {
+    const page = await this.ensureBrowser();
+    log(`Uploading file: ${filePath}`);
+
+    try {
+      // Find file input
+      const fileInput = await page.$('input[type="file"]');
+      if (!fileInput) {
+        return {
+          success: false,
+          message: 'Could not find file input element',
+        };
+      }
+
+      // Set file
+      await fileInput.setInputFiles(filePath);
+      await page.waitForTimeout(1000);
+
+      return {
+        success: true,
+        message: `File uploaded: ${filePath}`,
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      return {
+        success: false,
+        message: `Upload failed: ${message}`,
+      };
+    }
+  }
+
+  async enableDeepResearch(): Promise<DeepResearchResult> {
+    const page = await this.ensureBrowser();
+    log('Enabling Deep Research...');
+
+    // Try multiple selectors
     const drSelectors = [
       'button[aria-label*="Deep Research" i]',
-      'button[aria-label*="深度研究" i]',
       '[data-test-id*="deep-research"]',
       'mat-chip:has-text("Deep Research")',
       '.deep-research-chip',
@@ -315,46 +502,52 @@ export class GeminiClient {
         const el = await page.$(sel);
         if (el) {
           await el.click();
-          log(`已點擊 Deep Research: ${sel}`);
+          log(`Clicked Deep Research: ${sel}`);
           await page.waitForTimeout(500);
-          return;
+          return {
+            success: true,
+            message: 'Deep Research enabled',
+          };
         }
       } catch { /* try next */ }
     }
 
-    // fallback：找包含 deep research 文字的按鈕
+    // Fallback: find button with deep research text
     const clicked = await page.evaluate(() => {
-      const keywords = ['deep research', '深度研究', 'deepresearch'];
+      const keywords = ['deep research', 'deepresearch'];
       const btns = document.querySelectorAll('button, [role="button"], mat-chip, .chip');
       for (const btn of Array.from(btns)) {
         const txt = (btn.textContent ?? '').toLowerCase().trim();
         const aria = (btn.getAttribute('aria-label') ?? '').toLowerCase();
         if (keywords.some(k => txt.includes(k) || aria.includes(k))) {
           (btn as HTMLElement).click();
-          return txt.slice(0, 60);
+          return true;
         }
       }
-      return null;
+      return false;
     });
 
     if (clicked) {
-      log(`已點擊 Deep Research（文字匹配）：${clicked}`);
-      await page.waitForTimeout(500);
-    } else {
-      log('警告：找不到 Deep Research 按鈕，繼續不帶 Deep Research');
+      log('Deep Research enabled (text matching)');
+      return {
+        success: true,
+        message: 'Deep Research enabled',
+      };
     }
+
+    return {
+      success: false,
+      message: 'Could not find Deep Research button',
+    };
   }
 
-  // ── 等待回覆完成 ──────────────────────────────────────────────────────────
-  private async waitForResponse(page: Page, isDeepResearch = false): Promise<string> {
-    // Deep Research 可能需要更長時間（5 分鐘）
-    const maxWait = isDeepResearch ? 300_000 : 120_000;
+  private async waitForResponse(page: Page, timeout: number): Promise<string> {
     const start = Date.now();
 
-    // 先等一下讓生成開始
+    // Wait a bit for generation to start
     await page.waitForTimeout(2000);
 
-    while (Date.now() - start < maxWait) {
+    while (Date.now() - start < timeout) {
       await page.waitForTimeout(1500);
 
       const isGenerating = await page.evaluate(() => {
@@ -374,14 +567,11 @@ export class GeminiClient {
         break;
       }
 
-      // Deep Research 狀態：若有進度顯示，印出 log
-      if (isDeepResearch) {
-        const elapsed = Math.round((Date.now() - start) / 1000);
-        if (elapsed % 15 === 0) log(`Deep Research 進行中... (${elapsed}s)`);
-      }
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      if (elapsed % 15 === 0) log(`Response generation in progress... (${elapsed}s)`);
     }
 
-    // 提取最後一則 model 回覆
+    // Extract last model response
     const answerText = await page.evaluate(() => {
       const selectors = [
         'message-content.model-response-text',
@@ -401,50 +591,10 @@ export class GeminiClient {
       return '';
     }).catch(() => '');
 
-    if (!answerText) log('警告：無法從 DOM 提取回覆文字');
+    if (!answerText) log('Warning: could not extract response text from DOM');
     return answerText;
   }
 
-  // ── 對話歷史 ──────────────────────────────────────────────────────────────
-  async getHistory(conversationId: string): Promise<HistoryMessage[]> {
-    const page = await this.ensureBrowser();
-    if (!page.url().includes(conversationId)) {
-      await page.goto(`https://gemini.google.com/app/${conversationId}`, {
-        waitUntil: 'domcontentloaded', timeout: 30_000,
-      });
-      await page.waitForTimeout(2000);
-    }
-
-    const messages = await page.evaluate(() => {
-      const result: Array<{ role: 'user' | 'model'; text: string }> = [];
-
-      // 找 user 訊息
-      const userMsgs = document.querySelectorAll('.query-text, user-query .query-text, [data-message-author-role="user"]');
-      const modelMsgs = document.querySelectorAll('message-content.model-response-text, model-response message-content, [data-message-author-role="model"] .markdown');
-
-      const maxLen = Math.max(userMsgs.length, modelMsgs.length);
-      for (let i = 0; i < maxLen; i++) {
-        if (userMsgs[i]) {
-          result.push({ role: 'user', text: userMsgs[i].textContent?.trim() ?? '' });
-        }
-        if (modelMsgs[i]) {
-          result.push({ role: 'model', text: modelMsgs[i].textContent?.trim() ?? '' });
-        }
-      }
-
-      // fallback
-      if (result.length === 0) {
-        document.querySelectorAll('.markdown').forEach((el, i) => {
-          const text = el.textContent?.trim() ?? '';
-          if (text) result.push({ role: i % 2 === 0 ? 'user' : 'model', text });
-        });
-      }
-
-      return result;
-    }).catch(() => []);
-
-    return messages.filter(m => m.text).map((m, i) => ({ ...m, messageId: `msg_${i}` }));
-  }
 
   async cleanup(): Promise<void> {
     try {

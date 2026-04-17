@@ -103,75 +103,141 @@
   },
   "hotPaths": [
     {
+      "path": "src\\gemini-client.ts",
+      "accessCount": 14,
+      "lastAccessed": 1776446486666,
+      "type": "file"
+    },
+    {
       "path": "tsconfig.json",
-      "accessCount": 8,
-      "lastAccessed": 1776442883169,
+      "accessCount": 9,
+      "lastAccessed": 1776443878941,
       "type": "file"
     },
     {
       "path": "package.json",
-      "accessCount": 6,
-      "lastAccessed": 1776442818696,
-      "type": "file"
-    },
-    {
-      "path": "src\\index.ts",
-      "accessCount": 5,
-      "lastAccessed": 1776442663211,
-      "type": "file"
-    },
-    {
-      "path": "src\\gemini-client.ts",
-      "accessCount": 5,
-      "lastAccessed": 1776442664704,
-      "type": "file"
-    },
-    {
-      "path": "src\\setup.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776442675982,
-      "type": "file"
-    },
-    {
-      "path": "scripts\\export-cookies.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776442679591,
+      "accessCount": 8,
+      "lastAccessed": 1776446423794,
       "type": "file"
     },
     {
       "path": "src\\errors.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776442686502,
+      "accessCount": 7,
+      "lastAccessed": 1776446335808,
       "type": "file"
     },
     {
-      "path": "src\\cookies.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776442689019,
-      "type": "file"
-    },
-    {
-      "path": "vitest.config.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776442969805,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 2,
-      "lastAccessed": 1776442082707,
+      "path": "src\\index.ts",
+      "accessCount": 6,
+      "lastAccessed": 1776443864276,
       "type": "file"
     },
     {
       "path": "src\\tools.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776442355829,
+      "accessCount": 6,
+      "lastAccessed": 1776446459240,
+      "type": "file"
+    },
+    {
+      "path": "src\\cookies.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776443867866,
+      "type": "file"
+    },
+    {
+      "path": "src\\setup.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776443869758,
+      "type": "file"
+    },
+    {
+      "path": "scripts\\export-cookies.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776443901286,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 5,
+      "lastAccessed": 1776446532570,
+      "type": "file"
+    },
+    {
+      "path": "vitest.config.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776443877919,
       "type": "file"
     },
     {
       "path": "eslint.config.js",
+      "accessCount": 3,
+      "lastAccessed": 1776443876485,
+      "type": "file"
+    },
+    {
+      "path": "src\\logger.ts",
       "accessCount": 2,
-      "lastAccessed": 1776443006907,
+      "lastAccessed": 1776443865958,
+      "type": "file"
+    },
+    {
+      "path": "src\\cookie-export.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776443869816,
+      "type": "file"
+    },
+    {
+      "path": "Makefile",
+      "accessCount": 2,
+      "lastAccessed": 1776443874586,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.test.json",
+      "accessCount": 2,
+      "lastAccessed": 1776443879487,
+      "type": "file"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "accessCount": 2,
+      "lastAccessed": 1776443885390,
+      "type": "file"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "accessCount": 2,
+      "lastAccessed": 1776443887244,
+      "type": "file"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "accessCount": 2,
+      "lastAccessed": 1776443887640,
+      "type": "file"
+    },
+    {
+      "path": "test\\cookies.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776443896983,
+      "type": "file"
+    },
+    {
+      "path": "test\\errors.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776443898249,
+      "type": "file"
+    },
+    {
+      "path": "test\\logger.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776443900488,
+      "type": "file"
+    },
+    {
+      "path": "test\\smoke.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776443900540,
       "type": "file"
     },
     {
@@ -181,75 +247,27 @@
       "type": "file"
     },
     {
-      "path": "src\\logger.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442625281,
-      "type": "file"
-    },
-    {
-      "path": "src\\cookie-export.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442648653,
-      "type": "file"
-    },
-    {
-      "path": "test\\logger.test.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442708371,
-      "type": "file"
-    },
-    {
-      "path": "test\\errors.test.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442712843,
-      "type": "file"
-    },
-    {
-      "path": "test\\cookies.test.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442722580,
-      "type": "file"
-    },
-    {
-      "path": "test\\smoke.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776442731336,
-      "type": "file"
-    },
-    {
-      "path": "Makefile",
-      "accessCount": 1,
-      "lastAccessed": 1776442737663,
-      "type": "file"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "accessCount": 1,
-      "lastAccessed": 1776442742238,
-      "type": "file"
-    },
-    {
-      "path": "CHANGELOG.md",
-      "accessCount": 1,
-      "lastAccessed": 1776442746641,
-      "type": "file"
-    },
-    {
-      "path": "CODE_OF_CONDUCT.md",
-      "accessCount": 1,
-      "lastAccessed": 1776442749312,
-      "type": "file"
-    },
-    {
       "path": ".env.example",
       "accessCount": 1,
       "lastAccessed": 1776442753826,
       "type": "file"
     },
     {
-      "path": "tsconfig.test.json",
+      "path": "C:\\Users\\user\\.claude\\plans\\snappy-conjuring-sonnet.md",
       "accessCount": 1,
-      "lastAccessed": 1776442887251,
+      "lastAccessed": 1776445706593,
+      "type": "file"
+    },
+    {
+      "path": "src\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776446259925,
+      "type": "file"
+    },
+    {
+      "path": "src\\timeout-config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776446309165,
       "type": "file"
     }
   ],

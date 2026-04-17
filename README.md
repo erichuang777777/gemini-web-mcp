@@ -1,9 +1,8 @@
 # gemini-web-mcp
 
-讓 Claude 可以直接呼叫 **Google Gemini** 的 MCP Server。  
-支援切換模型（Gemini 2.5 Pro / Flash）和 **Deep Research** 深度搜尋。
+MCP server for **Google Gemini Web** — cookie-based authentication, no API key required.
 
-> An MCP server that lets Claude call Google Gemini, with model switching and Deep Research support.
+**Version 2.0.0** — 13 MCP tools with model switching, conversation management, file upload, and deep research support.
 
 ---
 
@@ -68,29 +67,55 @@ npx -y gemini-web-mcp setup
 
 ---
 
-## 🛠️ 可用工具 / Available Tools
+## Features
 
-| 工具 | 說明 |
-|------|------|
-| `gemini_auth_status` | 確認 Cookie 是否有效 |
-| `gemini_chat` | 傳送訊息給 Gemini |
-| `gemini_history` | 查看對話歷史 |
+- 🤖 **13 MCP Tools** — Complete conversation and model management
+- 🔀 **Model Switching** — Switch between Gemini models (2.0-flash, 1.5-pro, 1.5-flash, etc.)
+- 💬 **Conversation Management** — Create, list, switch, delete, and export conversations
+- 📁 **File Upload** — Send images, PDFs, and documents to Gemini
+- 🧠 **Deep Research** — Enable advanced research mode for complex queries
+- 🔄 **Message Regeneration** — Regenerate Gemini's last response
+- 🛡️ Cookie-based login (no Google API key needed)
 
-### gemini_chat 參數
+## MCP Tools (13 total)
 
-| 參數 | 說明 | 範例 |
-|------|------|------|
-| `message` | 要傳送的訊息（必填）| `"幫我分析這份資料"` |
-| `conversationId` | 繼續舊對話（選填）| `"58d0100f2707c10d"` |
-| `model` | 指定模型（選填）| `"2.5-pro"` |
-| `deepResearch` | 深度搜尋模式（選填）| `true` |
+| # | Tool | Description |
+|---|------|-------------|
+| 1 | `gemini_auth_status` | Check authentication status |
+| 2 | `gemini_chat` | Send message (supports model, deep research) |
+| 3 | `gemini_new_chat` | Create new conversation |
+| 4 | `gemini_select_model` | Switch model (2.0-flash, 1.5-pro, 1.5-flash, etc.) |
+| 5 | `gemini_get_model` | Get current active model |
+| 6 | `gemini_get_conversation` | Get all messages in current conversation |
+| 7 | `gemini_list_conversations` | List all saved conversations |
+| 8 | `gemini_switch_conversation` | Switch to a specific conversation |
+| 9 | `gemini_delete_conversation` | Delete a conversation |
+| 10 | `gemini_upload_file` | Upload files (images, PDFs) |
+| 11 | `gemini_enable_deep_research` | Enable deep research mode |
+| 12 | `gemini_export_conversation` | Export as markdown/JSON |
+| 13 | `gemini_regenerate` | Regenerate last response |
 
-**支援的模型：**
-- `2.5-pro` — Gemini 2.5 Pro（最強，速度較慢）
-- `2.5-flash` — Gemini 2.5 Flash（快速）
-- `2.0-flash` — Gemini 2.0 Flash
-- `2.0-flash-thinking` — Gemini 2.0 Flash Thinking（思考模式）
-- `default` — 沿用目前選擇
+### Tool Details
+
+#### `gemini_chat` (Enhanced)
+Send a message to Gemini with optional model switching and deep research.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `message` | string (required) | The message to send |
+| `conversationId` | string (optional) | Continue an existing conversation |
+| `model` | string (optional) | Switch model: auto, gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-pro-001 |
+| `enableSearch` | boolean (optional) | Enable deep research mode |
+
+**Response:**
+```json
+{
+  "success": true,
+  "conversationId": "abc123",
+  "answer": "Gemini's response...",
+  "conversationUrl": "https://gemini.google.com/app/abc123"
+}
+```
 
 ---
 

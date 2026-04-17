@@ -22,3 +22,11 @@ export class GeminiNetworkError extends GeminiError {
     this.name = 'GeminiNetworkError';
   }
 }
+
+/** 操作逾時 */
+export class GeminiTimeoutError extends GeminiError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GeminiTimeoutError';
+  }
+}
