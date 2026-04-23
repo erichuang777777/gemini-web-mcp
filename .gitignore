@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+cookies/gemini-cookies.json
+cookies/chatgpt-cookies.json
+.omc/
